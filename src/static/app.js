@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      // Reset activity select (keep placeholder)
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -36,6 +38,28 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         activitiesList.appendChild(activityCard);
+        
+          // Recreate the participants section with delete buttons
+          const participantsSection = activityCard.querySelector(".participants-section");
+          if (details.participants.length > 0) {
+            const participantsContainer = document.createElement("div");
+            participantsContainer.className = "participants-container";
+          
+            details.participants.forEach(participant => {
+              const participantItem = document.createElement("div");
+              participantItem.className = "participant-item";
+              participantItem.innerHTML = `
+                <span>${participant}</span>
+                <button class="delete-btn" data-activity="${name}" data-email="${participant}" title="Delete participant">✕</button>
+              `;
+              participantsContainer.appendChild(participantItem);
+            });
+          
+            const h5 = participantsSection.querySelector("h5");
+            participantsSection.innerHTML = "";
+            participantsSection.appendChild(h5);
+            participantsSection.appendChild(participantsContainer);
+          }
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -70,6 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+          await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -88,6 +113,33 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error signing up:", error);
     }
   });
+
+    // Handle delete button clicks
+    document.addEventListener("click", async (event) => {
+      const deleteBtn = event.target.closest(".delete-btn");
+      if (!deleteBtn) return;
+
+      const activity = deleteBtn.dataset.activity;
+      const email = deleteBtn.dataset.email;
+
+      try {
+        const response = await fetch(
+          `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        if (response.ok) {
+          await fetchActivities();
+        } else {
+          const result = await response.json();
+          console.error("Failed to unregister:", result.detail);
+        }
+      } catch (error) {
+        console.error("Error unregistering:", error);
+      }
+    });
 
   // Initialize app
   fetchActivities();
